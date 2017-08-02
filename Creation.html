@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+
+    <head>
+        <link rel="stylesheet" type="text/css" href="/public/css/style.css">
+        <meta charset = "utf-8"/>
+        <script src="https://www.gstatic.com/firebasejs/4.2.0/firebase.js"></script>
+    </head>
+
+    <body id="CreationBody">
+    
+        <h1> Account creation</h1>
+        
+        <form method="POST" action="/Creation"> <br>
+            <label for = "usernameCreation" class="inputText">Username</label> <br>
+            <input name="usernameCreation" type="text" class="Input" id="UserNameCreation"> <br> <br>
+            
+            <label for="validateUsernameCreation" class="inputText">validate Username</label> <br>
+            <input name="validateUsernameCreation" class="Input" id="UserNameCreationValidate"> <br> <br>
+
+            <label for="passwordCreation" class="inputText">password</label> <br>
+            <input name="passwordCreation" type="password" class="Input" id="PassWordCreation"> <br><br>
+            
+            <label for "validatePasswordCreation" class="inputText">validate password</label> <br>
+            <input name="validatePasswordCreation" type="password" class="Input" id="PassWordCreationValidate"> <br> <br>
+
+            <label for="emailCreation" class="inputText">email adress</label> <br>
+            <input name="emailCreation" type="email" class="Input"> <br> <br>
+            
+            <label for="validateEmailCreaion" class="inputText">validate email adress</label> <br>
+            <input name="validateEmailCreation" type="email" class="Input"> <br>
+            
+            <label for="creation"> </label>
+            <button id="CreateAccountButton">create account</button>
+        </form> <br>
+
+        <p class="CreationAnswer" id="creationAnswer"> </p>
+        
+    
+    </body>
+
+
+</html>
