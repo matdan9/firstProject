@@ -4,13 +4,105 @@
     <head> 
         <link rel="stylesheet" type="text/css" href="/../css/style.css">
         <meta charset="utf-8"/>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"> </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.slim.js"></script>
+        <script src="../public/components/socket.io.js"></script>
+        <script src="../public/components/socket.io.slim.js"></script>
+
+        <link rel="stylesheet" href="/../styles/kendo.common.min.css" />
+        <link rel="stylesheet" href="/../styles/kendo.default.min.css" />
+        <link rel="stylesheet" href="/../styles/kendo.default.mobile.min.css" />
+        
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.2.1.min.js"></script>
+
+        <script src="../js/kendo.all.min.js"></script>
     </head>
 
-    <doby> 
+    <doby id="logBody"> 
 
+<script>
+
+var socket = io.connect("http://localhost:8000");
+
+var dataT;
+
+var dataLoad = false;
+    
+function attemp()
+    {
+               console.log(dataLoad);
+            
+                    console.log(dataT);
+                    $("#grid").kendoGrid(
+                        {   
+                            columns: 
+                            [
+                                {title: "Username", field:"username"},
+                                {title: "Connection Point", field:"connectionPoints",type: "number"},
+                                {title: "Email adress", field:"email"}
+                            ],
+                            dataSource:
+                            {
+                                data: dataT
+                            },
+                            schema:
+                            {
+                                model:
+                                {
+                                    fields:
+                                    {
+                                        "username":{type: "string"},
+                                        "connectionPoints":{type: "number"},
+                                        "email":{type: "string"}
+                                    }
+                                }
+                            },
+                            height: 300,
+                            scrollable: true,
+                            filterable: 
+                            {
+                                operators:
+                                {
+                                        string:
+                                        {
+                                            contains: "contains",
+                                            startswith: "begin with"
+                                        },
+                                        number:
+                                        {
+                                            eq: "equal to",
+                                            gt: "greater than",
+                                            lt: "less than"
+                                        }   
+                                }
+                            }
+                        });
+    }   
+    
+    
+    
+    
+    socket.on ("gridD", function(data)
+                    {
+                        dataT = data.dataG;
+                        console.log ("we reseved the data!!");
+                        console.log("the dataT of j-query " + dataT);
+                        dataLoad = true;
+                        attemp();
+                    });
+</script>        
+        <h1 id="welcom">Welcom <%= Gdata %> </h1>
+        <div id="grid">
         
+        </div>
+        <form action="/log" method="POST">
+            <label for="logout"> </label>
+            <button name="logout">logout</button>    
+        </form>
+
+        <p class="error"><%=logError%></p>
 
     </doby>
-
-
 </html>

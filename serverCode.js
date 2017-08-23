@@ -2,6 +2,7 @@ var express = require ("express");
 var bodyParser = require ("body-parser");
 var app = express();
 var urlencodedParser = bodyParser.urlencoded({ extended: false })
+var server = require("http");
 
 var Code = require ("./public/js/check.js");
 var answerConnection;
@@ -16,29 +17,39 @@ var config = {
     storageBucket: "loginpage-10812.appspot.com",
     messagingSenderId: "608993116980"
   };
-  firebase.initializeApp(config);
-  const auth = firebase.auth();
+firebase.initializeApp(config);
+const auth = firebase.auth();
+var database = firebase.database();
+var ref = database.ref ("user");
+var gridData = new Array;
+
+var socket = require("socket.io");
+
 
 app.set ("view engine", "ejs");
-app.listen(8000);
+var server = app.listen(8000);
 app.use ("/public/css", express.static (__dirname + "/public/css"));
 app.use ("/public/js", express.static (__dirname + "/public/js"));
-app.use ("/Menue", express.static(__dirname));
 app.use ("/css", express.static (__dirname + "/public/css"));
-var lo = "coucou";
+app.use ("/styles", express.static(__dirname + "/styles"));
+app.use ("/js", express.static (__dirname + "/public/js"));
+app.use ("/js", express.static (__dirname + "/js"));
+app.use ("/public/components", express.static (__dirname + "/public/components"));
 
+var dataSend = false;
+//set up socket.io
+var io = socket(server);
 
 //////////////////////////////////////////////////////////////////
 app.get ("/Menue", function(req, res)
 {
-    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});
+    res.sendFile (__dirname + "/Menue.html");
 });
 
 //////////////////////////////////////////////////////////////////
 app.get ("/", function (req, res)
 {
-    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});//res.sendFile (__dirname + "/Menue.html");
-    
+    res.sendFile (__dirname + "/Menue.html");
 });
 
 app.get ("/Creation", function(req, res)
@@ -52,35 +63,107 @@ console.log ("The server start!");
 
 //////////////////////////////////////////////////////////////////
 
+app.post("/log",urlencodedParser, function(req, res)
+{
+    promise = auth.signOut().then(function()
+    {
+        res.sendFile(__dirname + "/Menue.html");
+    }, function(error)
+    {
+        console.log("logout error");
+        res.render(__dirname + "/views/Log.ejs",{Gdata: nameUser, logError: error});
+    });
+});
+
 app.post ("/", urlencodedParser ,function (req, res)
 {
     var storedDataConnection = req.body;
+    email = storedDataConnection.Username;
+    pass = storedDataConnection.Password;
     
-    
-    Code.checkConnection (storedDataConnection.Username, storedDataConnection.Password);
-
-    console.log (storedDataConnection);
-    console.log ("this is the username from the server = " + storedDataConnection.Username);
-    console.log ("This is the passwordCheck from the server before the test " + Code.passwordCheck);
-    
-    if (Code.passwordCheck === true)
+    promise = auth.signInWithEmailAndPassword (email, pass).catch (function(error)
     {
-        console.log ("if");
-        console.log (Code.passwordCheck);
+        errorMessage = error.message;
+        errorCode = error.code;
 
-        res.sendFile (__dirname + "/Log.html");
-    }
-    else
-    {
-        answerConnection = "Wrong password or username!";
+        
+        // make better error message
+        if (errorCode == "auth/invalid-email")
+            {
+                res.render (__dirname + "/views/menue.ejs", {answer: errorMessage});
+            }
+        if (errorCode == "auth/user-disabled")
+            {
+                res.render (__dirname + "/views/menue.ejs", {answer: errorMessage});
+            }
+        if (errorCode == "auth/user-not-found")
+            {
+                res.render (__dirname + "/views/menue.ejs", {answer: errorMessage});
+            }
+        if (errorCode == "auth/wrong-password")
+            {
+                res.render (__dirname + "/views/menue.ejs", {answer: errorMessage});
+            }
+    });
+    promise.then (function(result)
+    {   
+        ref.once ("value", gotData, errorData);
 
-        console.log (Code.passwordCheck);
-        console.log ("else");
+        var errorData = function(error)
+        {
+            console.log ("there is an error " + error);
+        };
+            function gotData (data)
+            {
+                var cp;
+                var c;
+                var users = data.val();
+                var keys = Object.keys (users);
+                var b = keys.length + 1;
+                var nameUser;
+                gridData = [];
+                for (i = 0; i < keys.length; i++)
+                    {
+                        
+                        var userConnect = function()
+                        {
+                            for(k = 0; k < keys.length; k++)
+                                {
+                                    
+                                    var a = keys[k];
+                                     c = users[a].connectionPoints + 1;
+                                    
 
-        res.render (__dirname + "/views/menue", {answer: answerConnection});
-    }
-    
-    
+                                    if (users[a].email === email)
+                                        {
+                                            cp = firebase.database().ref().child("/user/" + a);
+                                            cp.update({"connectionPoints": c});   //solve by: https://stackoverflow.com/questions/31906323/firebase-update-causing-nodejs-server-to-crash-cant-set-headers-after-they-a/38735270
+                                            nameUser = users[a].username;
+                                            break;
+                                        }
+                                }
+                        }
+                        userConnect();
+                                var w = keys.length - 1;
+                                var a = keys[i];
+                                gridData.push (users[a]);
+                                
+                                if (i == w)
+                                    {
+                                        io.on("connection", function(socket)
+                                        {
+                                            socket.emit("gridD",
+                                            {
+                                                dataG: gridData
+                                            });
+                                        });
+                                        console.log("we have send the data");
+                                        res.render (__dirname + "/views/Log.ejs", {Gdata: nameUser, logError:" "});       
+                                    }
+                    }   
+            }
+    });
+      
 });
 
 
@@ -91,110 +174,62 @@ app.post ("/Creation", urlencodedParser, function (req, res)
     
     
     if (dataCreation.emailCreation === dataCreation.validateEmailCreation & dataCreation.usernameCreation === dataCreation.validateUsernameCreation & dataCreation.passwordCreation === dataCreation.validatePasswordCreation)
+    {
+            
+        email = dataCreation.emailCreation;
+        pass = dataCreation.passwordCreation;
+        console.log (email);
+            
+        promise = firebase.auth().createUserWithEmailAndPassword(email, pass).catch(function (error)
         {
-            email = dataCreation.emailCreation;
-            pass = dataCreation.passwordCreation;
-            
-            var promise = auth.createUserWithEmailAndPassword (email, pass);
-            promise.catch (function (error) // essaye un .then aulieu d,un .catch 
+            errorCode = error.code;
+            errorMessage = error.message;
+            if (errorMessage == "auth/weak-password")
             {
-                var errorCode = error.code;
-                var errorMessage = error.message;
-                if (errorMessage == "auth/weak-password")
-                {
-                    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});
-                }
-                else if (errorMessage == "auth/invalid-email")
-                {
-                    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});
-                }
-                else if (errorMessage == "auth/email-already-in-use")
-                {
-                    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});
-                }
-                 else if (errorMessage == "auth/operation-not-allowed")
-                {
-                    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});
-                }
-                else
-                {
-                    res.render (__dirname + "/views/errorCreation.ejs", {answerC: lo});
-                }
-            
-            
-            });
-            promise.then (function (result)
-            {
-                res.render (__dirname + "/views/creation.ejs");
-            });
-        }   
-    
-    
-    
-    
-    
-    
-    
-    /*
-    Code.checkCreation(dataCreation.emailCreation, dataCreation.validateEmailCreation, dataCreation.usernameCreation, 
-        dataCreation.validateUsernameCreation, dataCreation.passwordCreation, dataCreation.validatePasswordCreation);
-
-        console.log ("the crationAnswer = " + Code.creationTest);
-        
-        if (Code.creationTest === true)
-            {
-                user = dataCreation.usernameCreation;
-                email =  dataCreation.emailCreation;
-                pass = dataCreation.passwordCreation;
-                console.log ("email: " + email + "/ password: "+ pass);
-                
-                auth.createUserWithEmailAndPassword (email, pass);
-                res.render (__dirname + "/views/creation.ejs");
-                console.log ("create account!");
-
+                res.render (__dirname + "/views/errorCreation.ejs", {answerC: errorMessage});
+                console.log (errorMessage);
+                console.log ("auth/weak-password");
             }
-        else
+            if (errorMessage == "auth/invalid-email")
             {
-                console.log ("account not created");
-                errorMessage = error.message;
-                res.render (__dirname + "/views/errorCration.ejs", {answerC: errorMessage});
+                res.render (__dirname + "/views/errorCreation.ejs", {answerC: errorMessage});
+                console.log (errorMessage);
+                console.log ("auth/invalid-email");
             }
-    
-    
-    
-  
-            
-
-
-    
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var dataCreation = req.body;
-
-    Code.checkCreation (dataCreation.usernameCreation, dataCreation.validateUsernameCreation, 
-    dataCreation.passwordCreation, dataCreation.validatePasswordCreation)
-
-    if (Code.create === true)
-    {
-        res.render (__dirname + "/views/creation.ejs");
+            if (errorMessage == "auth/email-already-in-use")
+            {
+                res.render (__dirname + "/views/errorCreation.ejs", {answerC: errorMessage});
+                console.log (errorMessage);
+                console.log ("auth/email-already-in-use");
+            }
+            if (errorMessage == "auth/operation-not-allowed")
+            {
+                res.render (__dirname + "/views/errorCreation.ejs", {answerC: errorMessage});
+                console.log (errorMessage);
+                console.log ("auth/operation-not-allowed");
+            }
+            else
+            {
+                res.render (__dirname + "/views/errorCreation.ejs", {answerC: errorMessage});
+                console.log (errorMessage);
+                console.log ("need at least 6 characters");
+            }   
+        });
+        promise.then (function (result)
+        {
+             var data = 
+            {
+                username: dataCreation.usernameCreation,
+                email: dataCreation.emailCreation,
+                connectionPoints: 0
+            };
+            console.log (data);
+            ref.push (data);
+            res.render (__dirname + "/views/creation.ejs");
+        });
     }
-    else 
+    else
     {
-        answerCreation = "This username is already use!";
-        res.render (__dirname + "/views/errorCreation.ejs", {answerC: answerCreation});
+        res.render (__dirname + "/views/errorCreation.ejs", {answerC: "One or many of your validate version are wrong!"});
     }
-    */
 });
-
-/////////////////////////////////////////////////////////////////////
-// esj firebase express body-parser
-
-/*
-var Player1 = new object;
-
-Player1.race = "elf";
-
-if (Player1.race === "elf")
-    {
-        Player1.Speed = 50;
-    }
-*/

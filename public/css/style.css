@@ -83,7 +83,8 @@ li
 {
     position:relative;
     left: 5px;
-    font-size: 15px;
+    font-size: 20px;
+    color: red;
 }
 
 #creationAnswer
@@ -119,4 +120,25 @@ label
     margin:auto;
     border: solid 3px;
     border-top: solid 0px;
+}
+.error
+{
+    color: red;
+}
+#logBody
+{
+    position: absolute;
+    top: 40px;
+    width: 600px;
+    height: 400px;
+    margin: auto;
+}
+#welcom
+{
+    position: relative;
+    margin:auto;
+    text-align: center;
+    border: solid 0px;
+    background-color: #cccccc;
+    color: blue;
 }
